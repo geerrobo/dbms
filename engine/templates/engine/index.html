@@ -36,9 +36,7 @@
 <form action="{% url 'engine:query' %}" method="post">
     {% csrf_token %}
     <div class="form-group">
-        <!--            <label for="textInput">Input</label>-->
-        <!--            <input type="checkbox" id="c1" name="c1" value="">-->
-        <!--            <label for="c1">Convert to faster SQL command</label><br>-->
+
         <div class="row">
             <textarea class="form-control col" id="textInput" name='textInput' rows="10">{% if input %}{{ input }}{% endif %}</textarea>
             <textarea class="form-control col" id="exampleFormControlTextarea1" rows="10"
@@ -70,29 +68,7 @@ FROM bookmarks_1_or_tag_螢火蟲
     <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 <br>
-<!--<form action="" method="post">-->
-<!--    {% csrf_token %}-->
-<!--    <div class="form-group">-->
-<!--        &lt;!&ndash;            <label for="textInput">Input</label>&ndash;&gt;-->
-<!--        &lt;!&ndash;            <input type="checkbox" id="c2" name="c2" value="">&ndash;&gt;-->
-<!--        &lt;!&ndash;            <label for="c1">Convert to faster SQL command</label><br>&ndash;&gt;-->
-<!--        <div class="row">-->
-<!--            <textarea class="form-control col" id="textInput2" name='textInput2' rows="8">{% if raw %}{{ input2 }}{% endif %}</textarea>-->
-<!--            <textarea class="form-control col" id="exampleFormControlTextarea2" rows="8"-->
-<!--                      style="background-color: greenyellow;">-->
-<!--                {% if input2 %}-->
-<!--            {{ input2 }}-->
-<!--            {% else %}-->
-<!--SELECT "Habs".post_id, "Habs".hab-->
-<!--FROM "Habs"-->
-<!--WHERE ("Habs".post_id < 500);-->
-<!--            {% endif %}-->
-<!--                </textarea>-->
-<!--        </div>-->
-<!--    </div>-->
-<!--    <button type="submit" class="btn btn-primary">Submit</button>-->
-<!--</form>-->
-<!--<br>-->
+
 <h3>Costs: {% if costs %}{{ costs }}{% endif %}</h3>
 <div class="form-group">
     <label for="exampleFormControlTextarea2">Output</label>
