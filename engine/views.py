@@ -59,12 +59,6 @@ def getSplit(str):
                 strFrom = strFrom + split
             elif previous_command is 'WHERE':
                 strWhere = strWhere + split
-        # print('select EEE')
-        # print(strSelect)
-        # print('from EEE')
-        # print(strFrom)
-    # print('strSelect : ', strSelect)
-    # print('strFrom : ', strFrom)
     return Raw(selectRaw=strSelect, fromRaw=strFrom, whereRaw=strWhere, andRaw=strAnd)
 
 
@@ -86,7 +80,7 @@ def getCost(exps):
 
 
 def new_split(str):
-    str = str.replace('\n', ' ').replace('\r', '').replace('  ', ' ').replace
+    str = str.replace('\n', ' ').replace('\r', '').replace('  ', ' ')
     str_json = {}
 
     select_position = str.find('SELECT')
@@ -95,7 +89,7 @@ def new_split(str):
     current_position = select_position+6+1
 
     from_position = str.find('FROM', current_position, len(str))
-    str_json['select'] = str[current_position:from_position]
+    str_json['select'] = str[current_position:from_position].replace(' ', '')
     current_position = from_position+4+1
 
     # filter predicate pushing
@@ -112,7 +106,7 @@ def new_split(str):
                 if word == ')':
                     count_parentheses -= 1
                 if count_parentheses == 0:
-                    str_json['from'] = str[current_position:next_begin_parenthetical]
+                    str_json['from'] = str[current_position:next_begin_parenthetical].replace(' ', '')
                     str_json['temp_table'] = str[next_begin_parenthetical:next_begin_parenthetical+count_round+1]
                     if 'DISTINCT' in str_json['temp_table']:
                         str_json['temp_table'] = str_json['temp_table'].replace('DISTINCT', '')
@@ -122,19 +116,34 @@ def new_split(str):
     if 'WHERE' in str[current_position:]:
         where_position = str.find('WHERE', current_position, len(str))
         if 'from' not in str_json:
-            str_json['from'] = str[current_position:where_position]
+            str_json['from'] = str[current_position:where_position].replace(' ', '')
         current_position = where_position+5+1
 
+        str_json['where'] = []
         if 'AND' in str[current_position:]:
             and_position = str.find('AND', current_position, len(str))
-            str_json['where'] = str[current_position:and_position]
+            str_json['where'].append(str[current_position:and_position].replace(' ', ''))
             current_position = and_position+3+1
 
-            str_json['and'] = str[current_position:]
+            if 'AND' in str[current_position:]:
+                and_position = str.find('AND', current_position, len(str))
+                str_json['where'].append(str[current_position:and_position].replace(' ', ''))
+                current_position = and_position + 3 + 1
+
+                while True:
+                    if 'AND' in str[current_position:]:
+                        and_position = str.find('AND', current_position, len(str))
+                        str_json['where'].append(str[current_position:and_position].replace(' ', ''))
+                        current_position = and_position + 3 + 1
+                    else:
+                        str_json['where'].append(str[current_position:])
+                        break
+            else:
+                str_json['where'].append(str[current_position:].replace(' ', ''))
         else:
-            str_json['where'] = str[current_position:]
+            str_json['where'].append(str[current_position:].replace(' ', ''))
     else:
-        str_json['from'] = str[current_position:]
+        str_json['from'] = str[current_position:].replace(' ', '')
 
     return str_json
 
@@ -145,10 +154,17 @@ def concatenation_json(str_json):
         full_str += str_json['select']
         if 'from' in str_json:
             full_str += str_json['from']
+            if 'temp_table' in str_json:
+                if 'select' in str_json:
+                    full_str += str_json['select']
+                    if 'from' in str_json:
+                        full_str += str_json['from']
+                        if 'where' in str_json:
+                            for condition in str_json['where']:
+                                full_str += condition
             if 'where' in str_json:
-                full_str += str_json['where']
-                if 'and' in str_json:
-                    full_str += str_json['and']
+                for condition in str_json['where']:
+                    full_str += condition
     return full_str
 
 
@@ -156,9 +172,10 @@ def rawQuery(request):
     inputStr = request.POST['textInput']
     inputStr = inputStr.replace(';', '')
     str_json = new_split(inputStr)
-
-    return render(request, 'engine/index.html',
-                  {'raw': str_json, 'input': inputStr, 'table': str_json, 'costs': 'costs'})
+    if 'temp_table' in str_json:
+        str_json['temp_table'] = str_json['temp_table'].replace('\t', '')
+        str_json_temp_table = new_split(str_json['temp_table'])
+        str_json['temp_table'] = str_json_temp_table
 
     costs = -1
     # if 'EXPLAIN (ANALYZE ON)' in inputStr or 'EXPLAIN (ANALYZE TRUE)' in inputStr or 'EXPLAIN (COSTS ON)' in inputStr or 'EXPLAIN (COSTS TRUE)' in inputStr:
@@ -170,6 +187,7 @@ def rawQuery(request):
             password='2540',
         )
         cur = conn.cursor()
+        print(inputStr)
         cur.execute(inputStr)
         explain = cur.fetchall()
         costs = getCost(explain)
@@ -196,20 +214,11 @@ def rawQuery(request):
         split2 = getSplit(mat_list[4])
         slFrom = split.fromRaw.replace(' ', '')
         slFrom2 = split2.fromRaw.replace(' ', '')
-        # print('split from : ', slFrom)
-        # print('split2 from : ', slFrom2)
         ratio_form = fuzz.ratio(slFrom, slFrom2)
-        # print('ratio from => ', ratio_form)
-        # if slFrom in slFrom2 or slFrom2 in slFrom:
         if ratio_form >= 75:
-            # print('from in => ', ratio_form)
             slWhere = split.whereRaw + split.andRaw
             slWhere2 = split2.whereRaw.lstrip(' ')
             ratio_where = fuzz.ratio(slWhere, slWhere2)
-            # print('split where : ', slWhere)
-            # print('split2 where : ', slWhere2)
-            # print('ratio where => ', ratio_where)
-            # if split2.whereRaw.lstrip(' ') in split.whereRaw or split.whereRaw in split2.whereRaw:
             if ratio_where >= 75:
                 # print('where in => ', ratio_where)
                 splitSelectRaw = split.selectRaw
@@ -233,7 +242,7 @@ def rawQuery(request):
                 else:
                     strRaw = mRaw + '\n' + 'Costs = ' + str(costsTemp) + '\n\n'
                     materializer_bool = True
-                # break
+
     # for feature 2 check
     cur.execute(inputStr)
     queryOutput = cur.fetchall()
@@ -258,7 +267,6 @@ def rawQuery(request):
                     strRaw = strRaw + raw
                 else:
                     strRaw = strRaw + raw + 'UNION ALL\n'
-            # print(strSelect)
             cur.execute('EXPLAIN (COSTS TRUE) ' + strRaw)
             explainTemp = cur.fetchall()
             costsTemp = getCost(explainTemp)
@@ -269,11 +277,30 @@ def rawQuery(request):
             print('no or')
 
             # Predicate pushing
+            max_ratio = -1
+            where_index = 0
+            for condition in str_json['where']:
+                ratio = fuzz.ratio(condition, str_json_temp_table['select'])
+                if max_ratio < ratio:
+                    max_ratio = ratio
+                    where_index = str_json['where'].index(condition)
+            where_pop = str_json['where'].pop(where_index)
 
-
+            where_pop_split = where_pop.split('=')
+            where_pop_split[0] = where_pop_split[0].replace(' ', '')
+            where_pop_split[1] = where_pop_split[1].replace(' ', '')
+            if 'V' in where_pop_split[0]:
+                where_pop_split[0] = str_json_temp_table['select']
+            else:
+                where_pop_split[1] = str_json_temp_table['select']
+            str_json_temp_table['where'].append(where_pop_split[0] + ' = ' + where_pop_split[1])
+            new_str =concatenation_json(str_json)
+            cur.execute('EXPLAIN (COSTS TRUE) ' + new_str)
+            explainTemp = cur.fetchall()
+            costsTemp = getCost(explainTemp)
             cur.close()
             conn.close()
-            return render(request, 'engine/index.html', {'raw': strRaw, 'input': inputStr, 'table': queryOutput, 'costs': costs})
+            return render(request, 'engine/index.html', {'raw': strRaw + 'Costs = ' + str(costsTemp), 'input': inputStr, 'table': queryOutput, 'costs': costs})
     else:
         cur.close()
         conn.close()

@@ -61,6 +61,13 @@ AND "Posts".post_id="Tags".post_id
 EXPLAIN (COSTS TRUE)
 SELECT post_id, title, text
 FROM bookmarks_1_or_tag_螢火蟲
+
+EXPLAIN (COSTS TRUE)
+SELECT *
+FROM rental, payment, (SELECT DISTINCT staff.staff_id
+						FROM staff, store
+						WHERE store.store_id = staff.store_id AND store.store_id = 2) V
+WHERE rental.rental_id = payment.rental_id AND payment.amount < 2.00 AND rental.staff_id = V.staff_id
             {% endif %}
                 </textarea>
         </div>
