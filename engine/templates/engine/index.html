@@ -12,35 +12,162 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.1.0/css/v4-shims.min.css"
           integrity="sha512-p++g4gkFY8DBqLItjIfuKJPFvTPqcg2FzOns2BNaltwoCOrXMqRIOqgWqWEvuqsj/3aVdgoEo2Y7X6SomTfUPA=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+QingKe+HuangYou&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
             integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
             crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha384-A7FZj7v+d/sdmMqp/nOQwliLvUsJfDHW+k9Omg/a/EheAdgtzNs3hpfag6Ed950n" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
 </head>
 
-<body>
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-    <a class="navbar-brand" href="http://127.0.0.1:8000/engine">Engine</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
-            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav">
-            <li class="nav-item active">
-                <a class="nav-link" href="#">Coming Soon</a>
-            </li>
-        </ul>
-    </div>
+<style>
+    body {background-image: linear-gradient(#F0F2F0, #302b63, #000C40),
+                  url("../../media/examples/lizard.png");}
+    .from-group {
+
+	    position:relative;
+
+	    font-size: 1.5em;
+
+	    background: linear-gradient(21deg, red, blue);
+
+	    padding: 3px;
+
+	    display: inline-block;
+
+	    border-radius: 9999em;
+
+	    *:not(span) {
+		    position: relative;
+		    display: inherit;
+		    border-radius: inherit;
+		    margin: 0;
+		    border: none;
+		    outline: none;
+		    padding: 0 .325em;
+		    z-index: 1; // needs to be above the :focus span
+
+		    &:focus + span {
+			    opacity: 1;
+			    transform: scale(1);
+		    }
+	    }
+
+	    span {
+
+		        transform: scale(.993, .94);
+		        transition: transform .5s, opacity .25s;
+		        opacity: 0; // is hidden by default
+
+		    position:absolute;
+		    z-index: 0; // needs to be below the field (would block input otherwise)
+		    margin:4px; // a bit bigger than .input padding, this prevents background color pixels shining through
+		    left:0;
+		    top:0;
+		    right:0;
+		    bottom:0;
+		    border-radius: inherit;
+	    	pointer-events: none;
+    	}
+    }
+
+
+      button {
+
+      border: 5em;
+      cursor: pointer;
+      outline: none;
+      font-size: 16px;
+      -webkit-transform: translate(0);
+      transform: translate(0);
+      background-image: linear-gradient(45deg, #0F2027, #2C5364);
+      padding: 0.7em 2em;
+      border-radius: 65px;
+      -webkit-transition: box-shadow 0.25s;
+      transition: box-shadow 0.25s;
+      color: white;
+    }
+
+    button .text {
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-image: linear-gradient(45deg, #0F2027, #2C5364);
+    }
+
+    button:after {
+      content: "";
+      border-radius: 18px;
+      position: absolute;
+      margin: 4px;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      z-index: -1;
+    }
+
+    button:hover {
+      background-image: linear-gradient(-45deg, #0F2027, #2C5364);
+      box-shadow: 0 12px 24px rgba(128, 128, 128, 0.1);
+    }
+
+    button:hover .text {
+      background-image: linear-gradient(-45deg, ##0F2027, ##2C5364);
+    }
+    input, select, textarea{
+        color: black;
+    }
+    .sketchy {
+        width: 100%
+        display: inline-block;
+        border: 3px solid #333333;
+        font-size: 1.5rem;
+        border-radius: 2% 6% 5% 4% / 1% 1% 2% 4%;
+        text-transform: uppercase;
+        letter-spacing: 0.3ch;
+        background: #ffffff;
+        position: relative;
+    }
+    table {
+      border: 1px
+      font-family: arial, sans-serif;
+      border-collapse: collapse;
+      width: 100%;
+    }
+    td, th {
+      width: 100%;
+      border: 1px solid #dddddd;
+      text-align: left;
+      background: white;
+    }
+    tr:nth-child(even) {
+    background-color: #dddddd;}
+    #textInput {
+     left:  5px;
+     background: rgba(236, 233, 230, 0.3);
+    }
+
+</style>
+
+<body><nav class="navbar navbar-inverse bg-inverse navbar-toggleable-md">
+   <div class="container">
+      <a class="navbar-brand" href="http://127.0.0.1:8000/engine" style="font-family:ZCOOL QingKe HuangYou;font-size: 32px">DOA</a>
+   </div>
+
 </nav>
+
 
 <form action="{% url 'engine:query' %}" method="post">
     {% csrf_token %}
     <div class="form-group">
 
         <div class="row">
-            <textarea class="form-control col" id="textInput" name='textInput' rows="10">{% if input %}{{ input }}{% endif %}</textarea>
+            <textarea class="form-control col" id="textInput" name='textInput' rows="10" >{% if input %}{{ input }}{% endif %}</textarea>
             <textarea class="form-control col" id="exampleFormControlTextarea1" rows="10"
-                      style="background-color: greenyellow;">
+                      style="background-color: yellow;">
                 {% if raw %}
             {{ raw }}
             {% else %}
@@ -61,6 +188,13 @@ AND "Posts".post_id="Tags".post_id
 EXPLAIN (COSTS TRUE)
 SELECT post_id, title, text
 FROM bookmarks_1_or_tag_螢火蟲
+
+EXPLAIN (COSTS TRUE)
+SELECT *
+FROM rental, payment, (SELECT DISTINCT staff.staff_id
+						FROM staff, store
+						WHERE store.store_id = staff.store_id AND store.store_id = 2) V
+WHERE rental.rental_id = payment.rental_id AND payment.amount < 2.00 AND rental.staff_id = V.staff_id
             {% endif %}
                 </textarea>
         </div>
@@ -69,12 +203,27 @@ FROM bookmarks_1_or_tag_螢火蟲
 </form>
 <br>
 
-<h3>Costs: {% if costs %}{{ costs }}{% endif %}</h3>
-<div class="form-group">
-    <label for="exampleFormControlTextarea2">Output</label>
-    <textarea class="form-control" id="exampleFormControlTextareaOutput"
-              rows="10">{% if table %}{{ table }}{% endif %}</textarea>
-</div>
+<table>
+    <tr>
+        <th><div class="sketchy">Costs: {% if costs %}{{ costs }}{% endif %} </div></th>
+
+    </tr>
+</table>
+
+<table >
+        <tr>
+            <th >
+                <div >Output <br></div>
+                <div style="background: rgba(236, 233, 230, 0.3);">{% if table %}{{ table }}{% endif %} </div>
+
+            </th>
+        </tr >
+
+
+
+
+</table>
+
 </body>
 
 </html>

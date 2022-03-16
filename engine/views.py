@@ -86,9 +86,8 @@ def getCost(exps):
 
 
 def new_split(str):
-    str = str.replace('\n', ' ').replace('\r', '').replace('  ', ' ').replace
+    str = str.replace('\n', ' ').replace('\r', '').replace('  ', ' ')
     str_json = {}
-
     select_position = str.find('SELECT')
     if 'EXPLAIN' in str[:select_position]:
         str_json['pre_select'] = str[:select_position]
