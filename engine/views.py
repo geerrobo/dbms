@@ -3,6 +3,7 @@ from django.shortcuts import render
 import psycopg2
 from fuzzywuzzy import fuzz
 
+
 def index(request):
     return render(request, 'engine/index.html', {})
 
@@ -69,7 +70,7 @@ def getCost(exps):
         if '..' in exp:
             index = exp.index('..')
             # print('find cost: ', index)
-            c = exp[index+2:index+15]
+            c = exp[index + 2:index + 20]
             # print(c)
             split = c.split(' row')
             costs = costs + float(split[0])
@@ -86,11 +87,11 @@ def new_split(str):
     select_position = str.find('SELECT')
     if 'EXPLAIN' in str[:select_position]:
         str_json['pre_select'] = str[:select_position]
-    current_position = select_position+6+1
+    current_position = select_position + 6 + 1
 
     from_position = str.find('FROM', current_position, len(str))
     str_json['select'] = str[current_position:from_position].replace(' ', '')
-    current_position = from_position+4+1
+    current_position = from_position + 4 + 1
 
     # filter predicate pushing
     if '(' in str[current_position:] and 'WHERE' in str[current_position:]:
@@ -99,7 +100,7 @@ def new_split(str):
         if next_begin_parenthetical < next_where:
             count_parentheses = 1
             count_round = 0
-            for word in str[next_begin_parenthetical+1:]:
+            for word in str[next_begin_parenthetical + 1:]:
                 count_round += 1
                 if word == '(':
                     count_parentheses += 1
@@ -107,23 +108,23 @@ def new_split(str):
                     count_parentheses -= 1
                 if count_parentheses == 0:
                     str_json['from'] = str[current_position:next_begin_parenthetical].replace(' ', '')
-                    str_json['temp_table'] = str[next_begin_parenthetical:next_begin_parenthetical+count_round+1]
+                    str_json['temp_table'] = str[next_begin_parenthetical:next_begin_parenthetical + count_round + 1]
                     if 'DISTINCT' in str_json['temp_table']:
                         str_json['temp_table'] = str_json['temp_table'].replace('DISTINCT', '')
-                    current_position = next_begin_parenthetical+count_round+1
+                    current_position = next_begin_parenthetical + count_round + 1
                     break
 
     if 'WHERE' in str[current_position:]:
         where_position = str.find('WHERE', current_position, len(str))
         if 'from' not in str_json:
             str_json['from'] = str[current_position:where_position].replace(' ', '')
-        current_position = where_position+5+1
+        current_position = where_position + 5 + 1
 
         str_json['where'] = []
         if 'AND' in str[current_position:]:
             and_position = str.find('AND', current_position, len(str))
             str_json['where'].append(str[current_position:and_position].replace(' ', ''))
-            current_position = and_position+3+1
+            current_position = and_position + 3 + 1
 
             if 'AND' in str[current_position:]:
                 and_position = str.find('AND', current_position, len(str))
@@ -142,6 +143,16 @@ def new_split(str):
                 str_json['where'].append(str[current_position:].replace(' ', ''))
         else:
             str_json['where'].append(str[current_position:].replace(' ', ''))
+        where_list = []
+        for where in str_json['where']:
+            if ')' in where and '(' not in where:
+                where = where.replace(')', '')
+            if 'OR' in where:
+                where = where.replace('OR', ' OR ')
+                if 'like' in where:
+                    where = where.replace('like', ' like ')
+            where_list.append(where)
+        str_json['where'] = where_list
     else:
         str_json['from'] = str[current_position:].replace(' ', '')
 
@@ -151,21 +162,19 @@ def new_split(str):
 def concatenation_json(str_json):
     full_str = ''
     if 'select' in str_json:
-        full_str += str_json['select']
+        full_str += 'SELECT ' + str_json['select'] + '\n'
         if 'from' in str_json:
-            full_str += str_json['from']
+            full_str += ' FROM ' + str_json['from'] + '\n'
+
             if 'temp_table' in str_json:
-                if 'select' in str_json:
-                    full_str += str_json['select']
-                    if 'from' in str_json:
-                        full_str += str_json['from']
-                        if 'where' in str_json:
-                            for condition in str_json['where']:
-                                full_str += condition
+                full_str += ' (' + concatenation_json(str_json['temp_table']) + ') AS V ' + '\n'
+
             if 'where' in str_json:
+                pop = str_json['where'].pop(0)
+                full_str += ' WHERE ' + pop + '\n'
                 for condition in str_json['where']:
-                    full_str += condition
-    return full_str
+                    full_str += ' AND ' + condition
+    return full_str.replace('  ', ' ')
 
 
 def rawQuery(request):
@@ -176,33 +185,32 @@ def rawQuery(request):
         str_json['temp_table'] = str_json['temp_table'].replace('\t', '')
         str_json_temp_table = new_split(str_json['temp_table'])
         str_json['temp_table'] = str_json_temp_table
-
+    str_json2 = new_split(inputStr)
+    if 'temp_table' in str_json2:
+        str_json2['temp_table'] = str_json2['temp_table'].replace('\t', '')
+        str_json_temp_table2 = new_split(str_json2['temp_table'])
+        str_json2['temp_table'] = str_json_temp_table2
     costs = -1
+    conn = psycopg2.connect(
+        host='localhost',
+        database='habr',
+        # database='dvdrental',
+        user='postgres',
+        password='2540',
+    )
     # if 'EXPLAIN (ANALYZE ON)' in inputStr or 'EXPLAIN (ANALYZE TRUE)' in inputStr or 'EXPLAIN (COSTS ON)' in inputStr or 'EXPLAIN (COSTS TRUE)' in inputStr:
     if 'pre_select' in str_json:
-        conn = psycopg2.connect(
-            host='localhost',
-            database='habr',
-            user='postgres',
-            password='2540',
-        )
         cur = conn.cursor()
-        print(inputStr)
-        cur.execute(inputStr)
+        c = 'EXPLAIN (COSTS TRUE) ' + concatenation_json(str_json2)
+        cur.execute(c)
         explain = cur.fetchall()
         costs = getCost(explain)
     else:
-        conn = psycopg2.connect(
-            host='localhost',
-            database='habr',
-            user='postgres',
-            password='2540',
-        )
         cur = conn.cursor()
-        cur.execute('EXPLAIN (COSTS TRUE) ' + inputStr)
+        c = 'EXPLAIN (COSTS TRUE) ' + concatenation_json(str_json2)
+        cur.execute(c)
         explain = cur.fetchall()
         costs = getCost(explain)
-
     strRaw = inputStr
     split = getSplit(inputStr)
     # for feature 2 check
@@ -222,18 +230,12 @@ def rawQuery(request):
             if ratio_where >= 75:
                 # print('where in => ', ratio_where)
                 splitSelectRaw = split.selectRaw
-                print(splitSelectRaw)
                 while splitSelectRaw.find(".") != -1:
                     first_index = splitSelectRaw.find("\"")
-                    print(first_index)
                     last_index = splitSelectRaw.find(".")
-                    print(last_index)
-                    print(splitSelectRaw[0:first_index])
-                    splitSelectRaw = splitSelectRaw[:first_index] + splitSelectRaw[last_index+1:]
-                    print(splitSelectRaw)
+                    splitSelectRaw = splitSelectRaw[:first_index] + splitSelectRaw[last_index + 1:]
 
                 mRaw = splitSelectRaw + 'FROM ' + mat_list[1]
-                print('execute')
                 cur.execute('EXPLAIN (COSTS TRUE) ' + mRaw)
                 explainTemp = cur.fetchall()
                 costsTemp = getCost(explainTemp)
@@ -249,7 +251,6 @@ def rawQuery(request):
 
     if split.selectRaw != '' and split.fromRaw != '' and split.whereRaw != '' and not materializer_bool:
         if 'OR' in split.whereRaw:
-            print('HAS OR')
             temp = split.whereRaw.split('(')
             temp1 = temp[1].split(')')
             inWheres = temp1[0].split(' OR ')
@@ -272,10 +273,10 @@ def rawQuery(request):
             costsTemp = getCost(explainTemp)
             cur.close()
             conn.close()
-            return render(request, 'engine/index.html', {'raw': strRaw + 'Costs = ' + str(costsTemp), 'input': inputStr, 'table': queryOutput, 'costs': costs})
+            return render(request, 'engine/index.html',
+                          {'raw': strRaw + 'Costs = ' + str(costsTemp), 'input': inputStr, 'table': queryOutput,
+                           'costs': costs})
         else:
-            print('no or')
-
             # Predicate pushing
             max_ratio = -1
             where_index = 0
@@ -291,21 +292,30 @@ def rawQuery(request):
             where_pop_split[1] = where_pop_split[1].replace(' ', '')
             if 'V' in where_pop_split[0]:
                 where_pop_split[0] = str_json_temp_table['select']
+                where_pop_1 = where_pop_split[1]
+                point_index = where_pop_1.find('.')
+                str_json_temp_table['from'] += ',' + where_pop_1[:point_index]
             else:
                 where_pop_split[1] = str_json_temp_table['select']
+                where_pop_0 = where_pop_split[0]
+                point_index = where_pop_0.find('.')
+                str_json_temp_table['from'] += ',' + where_pop_0[:point_index]
             str_json_temp_table['where'].append(where_pop_split[0] + ' = ' + where_pop_split[1])
-            new_str =concatenation_json(str_json)
+            str_json['temp_table'] = str_json_temp_table
+            new_str = concatenation_json(str_json)
             cur.execute('EXPLAIN (COSTS TRUE) ' + new_str)
             explainTemp = cur.fetchall()
             costsTemp = getCost(explainTemp)
             cur.close()
             conn.close()
-            return render(request, 'engine/index.html', {'raw': strRaw + 'Costs = ' + str(costsTemp), 'input': inputStr, 'table': queryOutput, 'costs': costs})
+            return render(request, 'engine/index.html',
+                          {'raw': new_str + '\nCosts = ' + str(costsTemp), 'input': inputStr, 'table': queryOutput,
+                           'costs': costs})
     else:
         cur.close()
         conn.close()
-        return render(request, 'engine/index.html', {'raw': strRaw, 'input': inputStr, 'table': queryOutput, 'costs': costs})
-
+        return render(request, 'engine/index.html',
+                      {'raw': strRaw, 'input': inputStr, 'table': queryOutput, 'costs': costs})
 
 # def rawQuery2(request):
 #     str = request.POST['textInput']
